@@ -14,75 +14,127 @@ import Modal from './Modal';
 
 function App() {
 
-  const [showInputTitle, setShowInputTitle] = useState(false)
   const [title, setTitle] = useState("")
-  const [data, setData] = useState('')
-  const [modal, setModal] = useState(false)
-  const [selInf, setSelInf] = useState()
-
+  const [modalTitle, setModalTitle] = useState('')
+  const [deleteEvent, setDeleteEvents] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedInfo, setSelectedInfo] = useState()
+  const [currentEvents, setCurrentEvents] = useState([])
+  const [clickedInfo, setClickedInfo] = useState()
+  const [checkedChantier, setCheckedChantier] = useState(false)
+  const [checkedInter, setCheckedInter] = useState(false)
   const handleDateSelect = (selectInfo) => {
     handleOpen()
-    //let calendarApi = selectInfo.view.calendar
-    setSelInf(selectInfo)
-    //let title = prompt('Please enter a new title for your event')
+    setSelectedInfo(selectInfo)
     //calendarApi.unselect() // clear date selection
-    /* 
-        if (title.length > 0) {
-          calendarApi.addEvent({ // will render immediately. will call handleEventAdd
-            title,
-            start: selectInfo.startStr,
-            end: selectInfo.endStr,
-            allDay: selectInfo.allDay
-          }, true) // temporary=true, will get overwritten when reducer gives new events
-        } */
   }
 
   const handleOpen = () => {
-    setModal(true)
+    setTitle('')
+    setModalTitle("Saisir un nom d'événement")
+    setShowModal(true)
   }
+
   const handleClose = () => {
-    setModal(!modal)
-    let calendarApi = selInf.view.calendar
+    setShowModal(!showModal)
+    let calendarApi = selectedInfo.view.calendar
     if (title.length > 0) {
       calendarApi.addEvent({ // will render immediately. will call handleEventAdd
         title,
-        start: selInf.startStr,
-        end: selInf.endStr,
-        allDay: selInf.allDay
+        start: selectedInfo.startStr,
+        end: selectedInfo.endStr,
+        allDay: selectedInfo.allDay,
+        backgroundColor: checkedChantier ? 'red' : 'green'
       }, true) // temporary=true, will get overwritten when reducer gives new events
     }
   }
 
 
+
+  const handleEventClick = (clickInfo) => {
+    setModalTitle("Supprimer événement?")
+    setDeleteEvents(!deleteEvent)
+    setShowModal(true)
+    setClickedInfo(clickInfo)
+
+  }
+
+
+  const handleEvents = (events) => {
+    setCurrentEvents(events)
+  }
+
+  const handleDelete = () => {
+    setDeleted(true)
+    setShowModal(false)
+    setDeleteEvents(!deleteEvent)
+  }
+
+  const handleChange = (target) => {
+    if (target == 'chantier') {
+      setCheckedChantier(true)
+      setCheckedInter(false)
+    } else {
+      setCheckedInter(true)
+      setCheckedChantier(false)
+    }
+  }
+
+  useEffect(() => {
+    if (deleted) {
+      clickedInfo.event.remove()
+    }
+  }, [deleted])
+
+
   return (
     <>
       {
-        modal && <div style={{ zIndex: 15, height: '200px', width: '200px', backgroundColor: 'pink', position: 'absolute', top: '100px', bottom: '100px' }}>
-          <p>ESSAI</p>
-          <input
-            autoFocus
-            type="text"
-            placeholder="Add Title"
-            style={{ width: "90%", marginRight: "10px" }}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)} />
-          <button onClick={() => handleClose()}>Close</button>
+        showModal && <div style={{ zIndex: 15, height: '40%', width: '20%', backgroundColor: 'pink', position: 'absolute', top: '30vh', right: '42vw' }}>
+          <p>{modalTitle}</p>
+          {
+            !deleteEvent &&
+            <>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Add Title"
+                style={{ width: "90%", marginRight: "10px" }}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)} />
+              <input type='checkbox' checked={checkedChantier} onChange={() => handleChange('chantier')} /> chantier
+              <input type='checkbox' checked={checkedInter} onChange={() => handleChange('inter')} /> inter
+            </>
+          }
+          {
+            !deleteEvent ?
+              <button onClick={() => handleClose()}>Valider</button>
+              :
+              <button onClick={() => handleDelete()}>Valider</button>
+          }
         </div>
       }
       <div style={{ zIndex: 10 }}>
         <header >
-
-
-
           <div style={{ width: '95vw' }} >
             <FullCalendar
               //themeSystem='bootstrap5'
+              views={{
+                timeGrid: {
+                  dayMaxEventRows: 6, // min value
+                },
+              }}
               locales={allLocales}
               editable={true}
               selectable={true}
               selectMirror={true}
               dayMaxEvents={true}
+              dayMaxEventRows={true}
               select={handleDateSelect}
+              eventClick={handleEventClick}
+              eventsSet={handleEvents}
+              weekNumbers={true}
               locale='fr'
               initialEvents={EVENTS}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -102,8 +154,6 @@ function App() {
 
 export default App;
 
-
-
 let eventGuid = 0
 let todayStr = new Date().toISOString().replace(/T.*$/, '') // YYYY-MM-DD of today
 
@@ -115,18 +165,21 @@ const EVENTS = [
     allDay: true,
     start: new Date(2022, 11, 1),
     end: new Date(2022, 11, 1),
+    backgroundColor: 'pink'
   },
   {
     id: createEventId(),
     title: "Vacation",
     start: new Date(2022, 11, 7),
     end: new Date(2022, 11, 10),
+    backgroundColor: 'green'
   },
   {
     id: createEventId(),
     title: "Conference",
     start: new Date(2022, 11, 20),
     end: new Date(2022, 11, 23),
+    backgroundColor: 'red'
   },
 ];
 
