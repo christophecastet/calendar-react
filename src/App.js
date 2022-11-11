@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, memo } from 'react'
 import './App.css';
 import FullCalendar from '@fullcalendar/react' // must go before plugins
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import allLocales from '@fullcalendar/core/locales-all';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -11,31 +11,51 @@ import { cloneDeep } from 'lodash';
 
 
 function App() {
-
+  // générateur d'id
+  let eventGuid = 0
+  function createEventId() {
+    return String(eventGuid++)
+  }
+  // Model
   const EVENTS = [
     {
-      id: 'chantier',
+      id: createEventId(),
       title: "Big Meeting",
       allDay: true,
       start: new Date(2022, 11, 1),
       end: new Date(2022, 11, 1),
-      backgroundColor: 'red'
+      backgroundColor: 'red',
+      description: 'chantier'
     },
     {
-      id: 'inter',
+      id: createEventId(),
       title: "Vacation",
       start: new Date(2022, 11, 7),
       end: new Date(2022, 11, 10),
-      backgroundColor: 'green'
+      backgroundColor: 'green',
+      description: 'inter'
     },
     {
-      id: 'chantier',
+      id: createEventId(),
       title: "Conference",
       start: new Date(2022, 11, 20),
       end: new Date(2022, 11, 23),
-      backgroundColor: 'red'
+      backgroundColor: 'red',
+      description: 'chantier'
+    },
+    {
+      id: createEventId(),
+      title: "Big Meeting",
+      allDay: true,
+      start: new Date(2022, 11, 3),
+      end: new Date(2022, 11, 3),
+      backgroundColor: 'pink',
+      display: 'background',
+      description: 'réunion'
     },
   ];
+
+
 
   const [title, setTitle] = useState("") // attribution d'un titre à l'événement
   const [modalTitle, setModalTitle] = useState('') // attribution du titre de la modale
@@ -54,6 +74,14 @@ function App() {
   const [currentEvents, setCurrentEvents] = useState([]) // événement courant
 
   const [events, setEvents] = useState(EVENTS)
+  const [draggableEvents, setDraggableEvents] = useState([
+    { title: "Event 1", id: "1" },
+    { title: "Event 2", id: "2" },
+    { title: "Event 3", id: "3" },
+    { title: "Event 4", id: "4" },
+    { title: "Event 5", id: "5" }
+  ])
+
 
   // lors de la selection des cases du calendrier :
   // => déclenche la fn qui gère la modale 
@@ -63,7 +91,6 @@ function App() {
     setSelectedInfo(selectInfo)
     //calendarApi.unselect() // clear date selection
   }
-
 
   // => ouvre la modale
   // => set un titre à la modale
@@ -82,27 +109,39 @@ function App() {
     let calendarApi = selectedInfo.view.calendar
     if (title.length > 0) {
       calendarApi.addEvent({ // will render immediately. will call handleEventAdd
-        id: target,
+        id: createEventId(),
         title,
         start: selectedInfo.startStr,
         end: selectedInfo.endStr,
         allDay: selectedInfo.allDay,
-        backgroundColor: checkedChantier ? 'red' : 'green'
+        backgroundColor: checkedChantier ? 'red' : 'green',
+        description: selectedInfo.description
       }, true) // temporary=true, will get overwritten when reducer gives new events
-      // ajout a hook envent
-
+      // dans le model local, ajout de la data à  la volé 
+      setEvents(events => [...events, {
+        id: createEventId,
+        title: title,
+        start: selectedInfo.startStr,
+        end: selectedInfo.endStr,
+        backgroundColor: checkedChantier ? 'red' : 'green',
+        description: selectedInfo.description
+      }])
     }
   }
 
-  // permet la suppression d'un event
+  // permet la suppression ou l'édition d'un event
   // => ajoute un titre à la modale
   // => ouvre la modale
   // => set les infos de la case cliqué 
   const handleEventClick = (clickInfo) => {
-    setModalTitle("Supprimer événement?")
+    setModalTitle("Supprimer/éditer événement?")
     setDeleteEvents(!deleteEvent)
     setShowModal(true)
     setClickedInfo(clickInfo)
+    setTarget('')
+    setTitle('')
+    setCheckedInter(false)
+
 
   }
 
@@ -110,7 +149,6 @@ function App() {
   const handleEvents = (events) => {
     setCurrentEvents(events)
   }
-
   // => set le flag deleted a true pour l'écouter dans un use state
   // => set le flag d'affichage deletedEvents pour afficher le bon boutton
   const handleDelete = () => {
@@ -143,36 +181,74 @@ function App() {
   // déclenche la fn de suppression d'event 
   useEffect(() => {
     if (deleted) {
-      clickedInfo.event.remove()
+      if (target !== 'edit') {
+        clickedInfo.event.remove()
+      } else {
+        clickedInfo.event.setProp('title', title)
+      }
     }
   }, [deleted])
 
+  // filtre
   useEffect(() => {
     if (isValueSelected) {
       console.log('choice', choice)
       let ev = events.filter(e =>
         //console.log('e', e),
-        e.id === choice
+        e.description === choice
       )
       setEvents(ev)
       setIsValueSelected(false)
     }
   }, [isValueSelected])
+
+  // Draggable events
+  const ExternalEvent = memo(({ event }) => {
+    let elRef = useRef(null);
+
+    useEffect(() => {
+      let draggable = new Draggable(elRef.current, {
+        eventData: function () {
+          return { ...event, create: true };
+        }
+      });
+
+      // a cleanup function
+      return () => draggable.destroy();
+    });
+
+    return (
+      <div
+        ref={elRef}
+        className="fc-event"
+        title={event.title}
+        style={{ cursor: 'grab', backgroundColor: '#007bff', margin: '10px 0', textAlign: 'center', height: '30px', width: '100px', borderRadius: '5px', color: 'white' }}
+      >
+        <div>
+          <div>
+            <strong>{event.title}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+
   return (
     <>
       {
         showModal && <div style={{ zIndex: 15, height: '40%', width: '20%', backgroundColor: 'pink', position: 'absolute', top: '30vh', right: '42vw' }}>
           <p>{modalTitle}</p>
+          <input
+            autoFocus
+            type="text"
+            placeholder="Add Title"
+            style={{ width: "90%", marginRight: "10px" }}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)} />
           {
             !deleteEvent &&
             <>
-              <input
-                autoFocus
-                type="text"
-                placeholder="Add Title"
-                style={{ width: "90%", marginRight: "10px" }}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)} />
               <input type='checkbox' checked={checkedChantier} onChange={() => handleChange('chantier')} /> chantier
               <input type='checkbox' checked={checkedInter} onChange={() => handleChange('inter')} /> inter
             </>
@@ -181,12 +257,34 @@ function App() {
             !deleteEvent ?
               <button onClick={() => handleClose()}>Valider</button>
               :
-              <button onClick={() => handleDelete()}>Valider</button>
+              <>
+                <input type='checkbox' checked={checkedInter} onChange={() => handleChange('edit')} />éditer
+                <button onClick={() => handleDelete()}>Valider</button>
+              </>
           }
         </div>
       }
       <div style={{ zIndex: 10 }}>
         <header >
+          <div
+            id="external-events"
+            style={{
+              padding: "10px",
+              width: "80%",
+              height: "auto",
+              //maxHeight: "-webkit-fill-available"
+            }}
+          >
+            <p align="left">
+              <strong> Draggable Events</strong>
+            </p>
+
+            <div id="external-events">
+              {draggableEvents.map((event) => (
+                <ExternalEvent key={event.id} event={event} />
+              ))}
+            </div>
+          </div>
           <div>
             <label htmlFor="event">Choisir un événement:</label>
             <select value={choice} name="event" id="event" onChange={(c) => handleSelectOption(c)}  >
@@ -206,6 +304,7 @@ function App() {
               }}
               locales={allLocales}
               editable={true}
+              //droppable={true}
               selectable={true}
               selectMirror={true}
               dayMaxEvents={true}
@@ -213,6 +312,7 @@ function App() {
               select={handleDateSelect}
               eventClick={handleEventClick} //to delete
               eventsSet={handleEvents}
+              //eventDrop={false}
               weekNumbers={true}
               locale='fr'
               events={events}
