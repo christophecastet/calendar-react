@@ -8,6 +8,7 @@ import allLocales from '@fullcalendar/core/locales-all';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { cloneDeep } from 'lodash';
+import { Calendar } from '@fullcalendar/core';
 
 
 function App() {
@@ -81,8 +82,8 @@ function App() {
     { title: "Event 4", id: "4" },
     { title: "Event 5", id: "5" }
   ])
-
-
+  const [newEvent, setNewEvent] = useState({ title: "", start: "", end: "" }) // event via date picker
+  const calendarRef = useRef();
   // lors de la selection des cases du calendrier :
   // => déclenche la fn qui gère la modale 
   // => attribution des infos relatives aux cases sélectionnées dans une variable
@@ -178,6 +179,26 @@ function App() {
     setIsValueSelected(true)
   }
 
+  // ajout avec date picker
+  function handleAddEvent() {
+    //console.log('calendarRef', calendarRef.current.select())
+    var calendarApi = calendarRef.current.getApi()
+    console.log('cal', newEvent)
+    calendarApi.addEvent(newEvent)
+    //let calendarApi = selectedInfo.view.calendar
+    if (newEvent.title.length > 0) {
+
+      // dans le model local, ajout de la data à  la volé 
+      setEvents(events => [...events, {
+        id: createEventId,
+        title: newEvent.title,
+        start: newEvent.startStr,
+        end: newEvent.endStr,
+      }])
+    }
+  }
+
+
   // déclenche la fn de suppression d'event 
   useEffect(() => {
     if (deleted) {
@@ -188,6 +209,7 @@ function App() {
       }
     }
   }, [deleted])
+
 
   // filtre
   useEffect(() => {
@@ -266,6 +288,16 @@ function App() {
       }
       <div style={{ zIndex: 10 }}>
         <header >
+          <div>
+            <div>
+              <input type="text" placeholder="Add Title" style={{ width: "20%", marginRight: "10px" }} value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} />
+              <DatePicker showTimeSelect placeholderText="Start Date" style={{ marginRight: "10px" }} selected={newEvent.start} dateFormat="yyyy-MM-dd" onChange={(start) => setNewEvent({ ...newEvent, start })} />
+              <DatePicker showTimeSelect placeholderText="End Date" selected={newEvent.end} dateFormat="yyyy-MM-dd" onChange={(end) => setNewEvent({ ...newEvent, end })} />
+              <button stlye={{ marginTop: "10px" }} onClick={() => handleAddEvent()}>
+                Ajouter événement
+              </button>
+            </div>
+          </div>
           <div
             id="external-events"
             style={{
@@ -276,7 +308,7 @@ function App() {
             }}
           >
             <p align="left">
-              <strong> Draggable Events</strong>
+              <strong> Draggable Evenements</strong>
             </p>
 
             <div id="external-events">
@@ -296,6 +328,7 @@ function App() {
 
           <div style={{ width: '95vw', marginTop: '15px' }} >
             <FullCalendar
+              ref={calendarRef}
               //themeSystem='bootstrap5'
               views={{
                 timeGrid: {
