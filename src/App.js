@@ -10,7 +10,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { cloneDeep } from 'lodash';
 import { Calendar } from '@fullcalendar/core';
 
-
+// FORMAT DES DATES POUR LE TEST : YYYY-MM-DD 
+// lors de l'utilisation sur une appli utiliser moment qui est compatible avec la lib
 function App() {
   // générateur d'id
   let eventGuid = 0
@@ -198,6 +199,11 @@ function App() {
     }
   }
 
+  // Fn permettant de naviguer sur une date choisie
+  const handleGoToDate = (date) => {
+    var calendarApi = calendarRef.current.getApi()
+    calendarApi.gotoDate(date)
+  }
 
   // déclenche la fn de suppression d'event 
   useEffect(() => {
@@ -289,6 +295,7 @@ function App() {
       <div style={{ zIndex: 10 }}>
         <header >
           <div>
+            <p style={{ textAlign: 'center', fontSize: '2em', fontWeight: '600' }}>Full Calendar</p>
             <div>
               <input type="text" placeholder="Add Title" style={{ width: "20%", marginRight: "10px" }} value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} />
               <DatePicker showTimeSelect placeholderText="Start Date" style={{ marginRight: "10px" }} selected={newEvent.start} dateFormat="yyyy-MM-dd" onChange={(start) => setNewEvent({ ...newEvent, start })} />
@@ -297,6 +304,9 @@ function App() {
                 Ajouter événement
               </button>
             </div>
+          </div>
+          <div>
+            <span> date en dure dans la fn 30/09/2024<button style={{ marginTop: '10px', marginLeft: '5px' }} onClick={() => handleGoToDate("2024-09-30")}>Aller à la date</button></span>
           </div>
           <div
             id="external-events"
@@ -326,7 +336,7 @@ function App() {
             <button onClick={() => setEvents(EVENTS)} style={{ marginLeft: '15px' }}>RESET</button>
           </div>
 
-          <div style={{ width: '95vw', marginTop: '15px' }} >
+          <div style={{ width: '95vw', margin: '15px 15px' }} >
             <FullCalendar
               ref={calendarRef}
               //themeSystem='bootstrap5'
